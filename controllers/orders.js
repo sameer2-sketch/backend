@@ -2,12 +2,13 @@ const admin = require('../firebaseConfig');
 const { handleFailError } = require('../utils/handleError');
 const { handleValidations } = require('../utils/handleValidation');
 const db = admin.firestore();
+const { FieldValue } = require('firebase-admin/firestore');
 
 
-exports.getConcepts = async (req, res) => {
+exports.addOrder = async (req, res) => {
     try {
-        const { topicId, categoryId } = req.params;
-        let errorObj = handleValidations(res, [{ 'topicId': topicId }, { 'categoryId': categoryId }]);
+        const { id, customerName, customerEmail, tableNumber, totalAmount, status, items } = req.body;
+        let errorObj = handleValidations(res, [{ 'id': id }, { 'customerName': customerName }, { 'customerEmail': customerEmail }, { 'tableNumber': tableNumber }, { 'totalAmount': totalAmount }, { 'status': status }, { 'items': items }]);
         if (Object.keys(errorObj).length > 0) {
             res.status(400).json({
                 message: errorObj?.message,
@@ -15,86 +16,46 @@ exports.getConcepts = async (req, res) => {
             })
             return;
         }
-        let docref = await db.collection('topics').doc(`${topicId + `_cat_${categoryId}852471JsPrep`}`).get();
-        let concepts = await db.collection('concepts').where('topicId', '==', docref.ref).get();
-        if (concepts.empty) {
-            res.status(404).json({
-                message: 'No concepts found',
-                detail: `No concepts found for ${topicId} in ${categoryId}`
-            })
-            return;
-        }
-        const conceptsData = [];
-        concepts.forEach(doc => {
-            conceptsData.push(doc.data());
-        });
-        const conceptsFromResponse = conceptsData?.length > 0 && conceptsData?.map(el => ({ id: el.id, data: el.data, title: el.title }));
-        res.status(200).json({
-            success: true,
-            concepts: conceptsFromResponse
-        })
-    } catch (error) {
-        handleFailError(res, error);
-    }
-}
-
-exports.addConcepts = async (req, res) => {
-    try {
-        const { categoryId, topicId, id, title, data } = req.body;
-        let errorObj = handleValidations(res, [{ 'topicId': topicId }, { 'categoryId': categoryId }, { 'id': id }, { 'title': title }, { 'data': data }]);
-        if (Object.keys(errorObj).length > 0) {
-            res.status(400).json({
-                message: errorObj?.message,
-                detail: errorObj?.detail
-            })
-            return;
-        }
-        let payload = { categoryId, topicId, id, title, data };
-        let snap = await db.collection('topics').doc(`${payload.topicId + `_cat_${payload.categoryId}852471JsPrep`}`).get();
-        if (!snap.exists) {
-            res.status(404).json({
-                message: 'No concepts found',
-                detail: `No concepts found for ${payload.topicId} in ${payload.categoryId}`
-            })
-            return;
-        } else if (snap.data().topicId !== payload.topicId) {
-            res.status(404).json({
-                message: 'No concepts found',
-                detail: `No concepts found for ${payload.topicId} in ${payload.categoryId}`
-            })
-            return;
-        }
-        let concepts = await db.collection('concepts').where('topicId', '==', snap.ref).get();
-        const conceptsData = [];
-        concepts.forEach(doc => {
-            conceptsData.push(doc.data())
-        });
-        const conceptsFromResponse = conceptsData?.length > 0 && conceptsData?.map(el => ({ id: el.id, description: el.description, title: el.title, imageUrl: el.imageUrl, points: el.points, tableData: el.tableData, hasPoints: el.hasPoints, hasTable: el.hasTable, columnHeader: el.columnHeader }));
-        for (let i = 0; i < conceptsFromResponse.length; i++) {
-            if (conceptsFromResponse[i].title === payload.title) {
-                res.status(400).json({
-                    message: 'Duplicate Concept',
-                    detail: `${payload.title} already exists`
-                })
-                return;
-            }
-        }
-        const docRef = db.collection('concepts').doc(`${payload.topicId + `${payload.title}_concept_${payload.categoryId}852471JsPrep`}`);
-        payload.topicId = db.doc(`/topics/${payload.topicId}_cat_${payload.categoryId}852471JsPrep`);
+        const payload = { id: id, customerName: customerName, customerEmail: customerEmail, tableNumber: tableNumber, totalAmount: totalAmount, status: status, items: items, createdAt: FieldValue.serverTimestamp() }
+        const docRef = db.collection('orders').doc(id);
         await docRef.set(payload);
         res.status(201).json({
             success: true,
-            message: `${payload.title} added successfully`
+            message: 'Order Added Successfully'
         })
     } catch (error) {
         handleFailError(res, error);
     }
 }
 
-exports.editConcept = async (req, res) => {
+exports.getOrders = async (req, res) => {
     try {
-        const { currentTitle, changedTitle, topicId, categoryId } = req.body;
-        let errorObj = handleValidations(res, [{ 'topicId': topicId }, { 'categoryId': categoryId }, { 'currentTitle': currentTitle }, { 'changedTitle': changedTitle }]);
+        const orderListRef = db.collection('orders');
+        const snapshot = await orderListRef.get();
+        if (snapshot.empty) {
+            res.status(404).json({
+                message: 'No support found',
+                detail: "No support found"
+            })
+            return;
+        }
+        const orderList = [];
+        snapshot.forEach(doc => {
+            orderList.push(doc.data())
+        });
+        res.status(200).json({
+            success: true,
+            orderList
+        })
+    } catch (error) {
+        handleFailError(res, error);
+    }
+}
+
+exports.editOrder = async (req, res) => {
+    try {
+        const { id, customerName, customerEmail, tableNumber, totalAmount, status, items } = req.body;
+        let errorObj = handleValidations(res, [{ 'id': id }, { 'customerName': customerName }, { 'customerEmail': customerEmail }, { 'tableNumber': tableNumber }, { 'totalAmount': totalAmount }, { 'status': status }, { 'items': items }]);
         if (Object.keys(errorObj).length > 0) {
             res.status(400).json({
                 message: errorObj?.message,
@@ -102,37 +63,55 @@ exports.editConcept = async (req, res) => {
             })
             return;
         }
-        let snap = await db.collection('topics').doc(`${topicId + `_cat_${categoryId}852471JsPrep`}`).get();
-        if (!snap.exists) {
+        let orderRef = await db.collection('orders').where('id', '==', id).get();
+        if (orderRef.empty) {
             res.status(404).json({
-                message: 'No concepts found',
-                detail: `No concepts found for ${topicId} in ${categoryId}`
-            })
-            return;
-        } else if (snap.data().topicId !== topicId) {
-            res.status(404).json({
-                message: 'No concepts found',
-                detail: `No concepts found for ${topicId} in ${categoryId}`
+                message: 'No data found',
+                detail: `No data found for ${id}`
             })
             return;
         }
-        let docQuery = db.collection('concepts').doc(`${topicId}${currentTitle}_concept_${categoryId}852471JsPrep`);
-        docQuery.get().then(doc => {
-            if (doc && doc.exists) {
-                let dataFromDoc = doc.data();
-                let data = { ...dataFromDoc, title: changedTitle }
-                db.collection('concepts').doc(`${topicId}${changedTitle}_concept_${categoryId}852471JsPrep`).set(data).then(resp => {
-                    db.collection('concepts').doc(`${topicId}${currentTitle}_concept_${categoryId}852471JsPrep`).delete();
-                }).catch(err => {
-                    res.status(500).json({
-                        message: 'Something went wrong. Please try again later',
-                        detail: `${err}`
-                    })
-                });
-            }
+        orderRef.forEach(doc => {
+            let docData = doc.data();
+            let updateData = { ...docData, customerName: customerName, customerEmail: customerEmail, items: items, tableNumber: tableNumber, totalAmount: totalAmount, status: status, updatedAt: FieldValue.serverTimestamp() }
+            doc.ref.update(updateData);
+        });
+        res.status(201).json({
+            success: true,
+            message: 'Updated Successfully'
+        })
+    } catch (error) {
+        handleFailError(res, error);
+    }
+}
+
+exports.deleteOrder = async (req, res) => {
+    try {
+        const { id } = req.body;
+        let errorObj = handleValidations(res, [{ 'id': id }]);
+        if (Object.keys(errorObj).length > 0) {
+            res.status(400).json({
+                message: errorObj?.message,
+                detail: errorObj?.detail
+            })
+            return;
+        }
+        let OrderRef = await db.collection('orders').where('id', '==', id).get();
+        if (OrderRef.empty) {
+            res.status(404).json({
+                message: 'No data found',
+                detail: `No data found for ${id}`
+            })
+            return;
+        }
+        const deleteQuery = db.collection('orders').where('id', '==', id);
+        deleteQuery.get().then(querySnapshot => {
+            querySnapshot.forEach(doc => {
+                doc.ref.delete();
+            })
             res.status(201).json({
-                message: 'Updated Successfully',
-                detail: `${changedTitle} updated successfully`
+                message: 'Deleted Successfully',
+                detail: `Deleted successfully`
             })
         }).catch(err => {
             res.status(500).json({
@@ -143,80 +122,4 @@ exports.editConcept = async (req, res) => {
     } catch (error) {
         handleFailError(res, error);
     }
-}
-
-exports.deleteConcept = async (req, res) => {
-    const { topicId, categoryId, title } = req.body;
-    let errorObj = handleValidations(res, [{ 'topicId': topicId }, { 'categoryId': categoryId }, { 'title': title }]);
-    if (Object.keys(errorObj).length > 0) {
-        res.status(400).json({
-            message: errorObj?.message,
-            detail: errorObj?.detail
-        })
-        return;
-    }
-    let snap = await db.collection('topics').doc(`${topicId + `_cat_${categoryId}852471JsPrep`}`).get();
-    if (!snap.exists) {
-        res.status(404).json({
-            message: 'No concepts found',
-            detail: `No concepts found for ${topicId} in ${categoryId}`
-        })
-        return;
-    } else if (snap.data().topicId !== topicId) {
-        res.status(404).json({
-            message: 'No concepts found',
-            detail: `No concepts found for ${topicId} in ${categoryId}`
-        })
-        return;
-    }
-    let docQuery = db.collection('concepts').where('title', '==', title);
-    docQuery.get().then(querySnapshot => {
-        querySnapshot.forEach(doc => {
-            doc.ref.delete();
-        })
-        res.status(201).json({
-            message: 'Concept Deleted Successfully',
-            detail: `${title} deleted successfully`
-        })
-    }).catch(err => {
-        res.status(500).json({
-            message: 'Something went wrong. Please try again later',
-            detail: `${err}`
-        })
-    })
-}
-
-exports.editDescriptionInSection = async (req, res) => {
-    const { categoryId, data, topicId, title } = req.body;
-    let snap = await db.collection('topics').doc(`${topicId + `_cat_${categoryId}852471JsPrep`}`).get();
-    if (!snap.exists) {
-        res.status(404).json({
-            message: 'No concepts found',
-            detail: `No concepts found for ${topicId} in ${categoryId}`
-        })
-        return;
-    } else if (snap.data().topicId !== topicId) {
-        res.status(404).json({
-            message: 'No concepts found',
-            detail: `No concepts found for ${topicId} in ${categoryId}`
-        })
-        return;
-    }
-    let docRef = db.collection('concepts').doc(`${topicId}${title}_concept_${categoryId}852471JsPrep`);
-    docRef.update({
-        data: data
-    }).then(resp => {
-        res.status(201).json({
-            message: 'Updated Successfully',
-            detail: `${title} updated successfully`
-        })
-        return;
-    }).catch(err => {
-        console.log(err)
-        res.status(400).json({
-            message: 'Update failed',
-            detail: err ? err?.details : `${title} update failed`
-        })
-        return;
-    })
 }
