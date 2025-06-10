@@ -85,6 +85,39 @@ exports.editOrder = async (req, res) => {
     }
 }
 
+exports.cancelOrder = async (req, res) => {
+    try {
+        const { id } = req.body;
+        let errorObj = handleValidations(res, [{ 'id': id }]);
+        if (Object.keys(errorObj).length > 0) {
+            res.status(400).json({
+                message: errorObj?.message,
+                detail: errorObj?.detail
+            })
+            return;
+        }
+        let orderRef = await db.collection('orders').where('id', '==', id).get();
+        if (orderRef.empty) {
+            res.status(404).json({
+                message: 'No data found',
+                detail: `No data found for ${id}`
+            })
+            return;
+        }
+        orderRef.forEach(doc => {
+            let docData = doc.data();
+            let updateData = { ...docData, status: 'cancelled', updatedAt: FieldValue.serverTimestamp() }
+            doc.ref.update(updateData);
+        });
+        res.status(201).json({
+            success: true,
+            message: 'Cancelled Successfully'
+        })
+    } catch (error) {
+        handleFailError(res, error);
+    }
+}
+
 exports.deleteOrder = async (req, res) => {
     try {
         const { id } = req.body;
