@@ -3,11 +3,36 @@ const { handleFailError } = require('../utils/handleError');
 const { handleValidations } = require('../utils/handleValidation');
 const db = admin.firestore();
 const { FieldValue } = require('firebase-admin/firestore');
-
+const axios = require('axios');
 
 exports.addOrder = async (req, res) => {
     try {
-        const { id, customerName, customerEmail, tableNumber, totalAmount, status, items } = req.body;
+        const { id, customerName, customerEmail, tableNumber, totalAmount, status, items, customerPhoneNumber } = req.body;
+        const response = await axios.post('https://sandbox.cashfree.com/pg/links', {
+            customer_details: {
+                customer_id: id,
+                customer_name: customerName,
+                customer_email: customerEmail,
+                customer_phone: customerPhoneNumber,
+            },
+            link_notify: {
+                send_sms: true,
+                send_email: true
+            },
+            link_meta: {
+               return_url: 'http://localhost:5173/'
+            },
+            link_id: id,
+            link_amount: totalAmount,
+            link_currency: "INR",
+            link_purpose: `Payment for Order ${id}\nThank You!`
+        }, { headers: {
+            "Content-Type": "application/json",
+            "x-client-id": "TEST106672356369ba7ec1c54d608ba853276601",
+            "x-client-secret": "cfsk_ma_test_e96b599933e5d183590fc141842803d2_c48abe8b",
+            "x-api-version": "2025-01-01"
+        }})
+        console.log(response)
         let errorObj = handleValidations(res, [{ 'id': id }, { 'customerName': customerName }, { 'customerEmail': customerEmail }, { 'tableNumber': tableNumber }, { 'totalAmount': totalAmount }, { 'status': status }, { 'items': items }]);
         if (Object.keys(errorObj).length > 0) {
             res.status(400).json({
@@ -17,12 +42,20 @@ exports.addOrder = async (req, res) => {
             return;
         }
         const payload = { id: id, customerName: customerName, customerEmail: customerEmail, tableNumber: tableNumber, totalAmount: totalAmount, status: status, items: items, createdAt: FieldValue.serverTimestamp() }
-        const docRef = db.collection('orders').doc(id);
-        await docRef.set(payload);
-        res.status(201).json({
-            success: true,
-            message: 'Order Added Successfully'
-        })
+        if(response?.data) {
+            const docRef = db.collection('orders').doc(id);
+            await docRef.set(payload);
+            res.status(201).json({
+                success: true,
+                message: 'Order Added Successfully',
+                data: response?.data
+            })
+        } else {
+            res.status(500).json({
+                message: 'Something went wrong. Please try again later',
+                detail: 'Something went wrong. Please try again later'
+            })
+        }
     } catch (error) {
         handleFailError(res, error);
     }
