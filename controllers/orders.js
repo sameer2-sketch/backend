@@ -7,20 +7,22 @@ const axios = require('axios');
 
 exports.addOrder = async (req, res) => {
     try {
-        const { id, customerName, customerEmail, tableNumber, totalAmount, status, items, customerPhoneNumber } = req.body;
+        const { id, customerName, customerEmail, tableNumber, totalAmount, status, items, customerPhoneNumber, from } = req.body;
+        let phoneNumber = '+91' + customerPhoneNumber;
+        const returnUrl = from === 'admin' ? 'http://localhost:3000/orders' : 'http://localhost:5173/orders';
         const response = await axios.post('https://sandbox.cashfree.com/pg/links', {
             customer_details: {
                 customer_id: id,
                 customer_name: customerName,
                 customer_email: customerEmail,
-                customer_phone: customerPhoneNumber,
+                customer_phone: phoneNumber,
             },
             link_notify: {
                 send_sms: true,
                 send_email: true
             },
             link_meta: {
-               return_url: 'http://localhost:5173/'
+               return_url: returnUrl
             },
             link_id: id,
             link_amount: totalAmount,
@@ -32,8 +34,7 @@ exports.addOrder = async (req, res) => {
             "x-client-secret": "cfsk_ma_test_e96b599933e5d183590fc141842803d2_c48abe8b",
             "x-api-version": "2025-01-01"
         }})
-        console.log(response)
-        let errorObj = handleValidations(res, [{ 'id': id }, { 'customerName': customerName }, { 'customerEmail': customerEmail }, { 'tableNumber': tableNumber }, { 'totalAmount': totalAmount }, { 'status': status }, { 'items': items }]);
+        let errorObj = handleValidations(res, [{ 'id': id }, { 'customerName': customerName }, { 'customerEmail': customerEmail }, { 'tableNumber': tableNumber }, { 'totalAmount': totalAmount }, { 'status': status }, { 'items': items }, { 'customerPhoneNumber': customerPhoneNumber }]);
         if (Object.keys(errorObj).length > 0) {
             res.status(400).json({
                 message: errorObj?.message,
@@ -41,7 +42,7 @@ exports.addOrder = async (req, res) => {
             })
             return;
         }
-        const payload = { id: id, customerName: customerName, customerEmail: customerEmail, tableNumber: tableNumber, totalAmount: totalAmount, status: status, items: items, createdAt: FieldValue.serverTimestamp() }
+        const payload = { id: id, customerName: customerName, customerEmail: customerEmail, tableNumber: tableNumber, totalAmount: totalAmount, status: status, customerPhoneNumber: phoneNumber, items: items, createdAt: FieldValue.serverTimestamp() }
         if(response?.data) {
             const docRef = db.collection('orders').doc(id);
             await docRef.set(payload);
@@ -87,8 +88,9 @@ exports.getOrders = async (req, res) => {
 
 exports.editOrder = async (req, res) => {
     try {
-        const { id, customerName, customerEmail, tableNumber, totalAmount, status, items } = req.body;
-        let errorObj = handleValidations(res, [{ 'id': id }, { 'customerName': customerName }, { 'customerEmail': customerEmail }, { 'tableNumber': tableNumber }, { 'totalAmount': totalAmount }, { 'status': status }, { 'items': items }]);
+        const { id, customerName, customerEmail, tableNumber, totalAmount, status, items, customerPhoneNumber } = req.body;
+        let phoneNumber = '+91' + customerPhoneNumber;
+        let errorObj = handleValidations(res, [{ 'id': id }, { 'customerName': customerName }, { 'customerEmail': customerEmail }, { 'tableNumber': tableNumber }, { 'totalAmount': totalAmount }, { 'status': status }, { 'items': items }, , { 'customerPhoneNumber': customerPhoneNumber }]);
         if (Object.keys(errorObj).length > 0) {
             res.status(400).json({
                 message: errorObj?.message,
@@ -106,7 +108,7 @@ exports.editOrder = async (req, res) => {
         }
         orderRef.forEach(doc => {
             let docData = doc.data();
-            let updateData = { ...docData, customerName: customerName, customerEmail: customerEmail, items: items, tableNumber: tableNumber, totalAmount: totalAmount, status: status, updatedAt: FieldValue.serverTimestamp() }
+            let updateData = { ...docData, customerName: customerName, customerEmail: customerEmail, items: items, tableNumber: tableNumber, totalAmount: totalAmount, status: status, customerPhoneNumber: phoneNumber, updatedAt: FieldValue.serverTimestamp() }
             doc.ref.update(updateData);
         });
         res.status(201).json({

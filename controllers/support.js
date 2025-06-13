@@ -7,7 +7,7 @@ const db = admin.firestore();
 
 exports.addSupport = async (req, res) => {
     try {
-        const { id, customerName, customerEmail, tableNumber, problemType, priority, status, problemDesc } = req.body;
+        const { id, customerName, customerEmail, tableNumber, problemType, priority, status, problemDesc, estimatedResolution } = req.body;
         let errorObj = handleValidations(res, [{ 'id': id }, { 'customerName': customerName }, { 'customerEmail': customerEmail }, { 'tableNumber': tableNumber }, { 'problemType': problemType }, { 'priority': priority }, { 'status': status }, { 'problemDesc': problemDesc }]);
         if (Object.keys(errorObj).length > 0) {
             res.status(400).json({
@@ -16,7 +16,7 @@ exports.addSupport = async (req, res) => {
             })
             return;
         }
-        const payload = { id: id, customerName: customerName, customerEmail: customerEmail, tableNumber: tableNumber, problemType: problemType, priority: priority, status: status, problemDesc: problemDesc, createdAt: FieldValue.serverTimestamp() }
+        const payload = { id: id, customerName: customerName, customerEmail: customerEmail, tableNumber: tableNumber, problemType: problemType, priority: priority, status: status, problemDesc: problemDesc, estimatedResolution: estimatedResolution, createdAt: FieldValue.serverTimestamp() }
         const docRef = db.collection('support').doc(id);
         await docRef.set(payload);
         res.status(201).json({
