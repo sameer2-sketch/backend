@@ -10,6 +10,7 @@ const userRoutes = require('./routes/userRoutes');
 const foodRoutes = require('./routes/foodRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const supportRoutes = require('./routes/supportRoutes');
+const feedbackRoutes = require('./routes/feedbackRoutes');
 const configRoutes = require('./routes/configRoutes');
 
 dotenv.config();
@@ -26,6 +27,7 @@ app.use('/api/v1/user', userRoutes);
 app.use('/api/v1/food', foodRoutes);
 app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/support', supportRoutes);
+app.use('/api/v1/feedback', feedbackRoutes);
 app.use('/api/v1/config', configRoutes);
 
 app.get("/", (req, res) => {

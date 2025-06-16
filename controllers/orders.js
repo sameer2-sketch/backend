@@ -122,7 +122,7 @@ exports.editOrder = async (req, res) => {
 
 exports.cancelOrder = async (req, res) => {
     try {
-        const { id } = req.body;
+        const { id, reason } = req.body;
         let errorObj = handleValidations(res, [{ 'id': id }]);
         if (Object.keys(errorObj).length > 0) {
             res.status(400).json({
@@ -141,7 +141,7 @@ exports.cancelOrder = async (req, res) => {
         }
         orderRef.forEach(doc => {
             let docData = doc.data();
-            let updateData = { ...docData, status: 'cancelled', updatedAt: FieldValue.serverTimestamp() }
+            let updateData = { ...docData, status: 'cancelled', reason: reason, updatedAt: FieldValue.serverTimestamp() }
             doc.ref.update(updateData);
         });
         res.status(201).json({
