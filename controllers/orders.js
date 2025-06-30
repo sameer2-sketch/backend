@@ -17,7 +17,7 @@ exports.handlePayment = async (req, res) => {
             return;
         }
         let phoneNumber = '+91' + customerPhoneNumber;
-        const returnUrl = from === 'admin' ? `http://localhost:3000/orders/${id}` : `http://localhost:5173/cart/${id}`;
+        const returnUrl = from === 'admin' ? `https://admin-hni6.vercel.app/orders/${id}` : `https://craxy-corner.vercel.app/cart/${id}`;
         const response = await axios.post('https://sandbox.cashfree.com/pg/links', {
             customer_details: {
                 customer_id: id,
