@@ -1,8 +1,10 @@
+const dotenv = require('dotenv');
+dotenv.config();
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const dotenv = require('dotenv');
 
 const app = express();
 
@@ -12,8 +14,6 @@ const orderRoutes = require('./routes/orderRoutes');
 const supportRoutes = require('./routes/supportRoutes');
 const feedbackRoutes = require('./routes/feedbackRoutes');
 const configRoutes = require('./routes/configRoutes');
-
-dotenv.config();
 
 
 
