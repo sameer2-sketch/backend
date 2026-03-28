@@ -4,7 +4,7 @@ const serviceAccount = require('./key.json')
 
 admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
-    storageBucket: "jsprep-ed0c8.appspot.com"
+    storageBucket: "diningwebsite-25476.appspot.com"
 });
 
 module.exports = admin;
